@@ -58,13 +58,13 @@ jobs:
             | grep -i mingw64 | awk '{print $3}' | sort -u | while read dll; do
             base=$(basename "$dll")
             [ -f "${RELEASE_DIR}/$base" ] || cp "$dll" "${RELEASE_DIR}/"
-          done
+          done || true
           for existing in "${RELEASE_DIR}"/*.dll; do
             ldd "$existing" 2>/dev/null \
               | grep -i mingw64 | awk '{print $3}' | sort -u | while read dll; do
               base=$(basename "$dll")
               [ -f "${RELEASE_DIR}/$base" ] || cp "$dll" "${RELEASE_DIR}/"
-            done
+            done || true
           done
 
       - name: Package
