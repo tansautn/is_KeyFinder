@@ -13,3 +13,4 @@ Makefile
 !is_keyfinder_en_GB.ts
 build/
 .qmake.stash
+dist
