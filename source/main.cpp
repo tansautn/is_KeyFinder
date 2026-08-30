@@ -109,9 +109,9 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setApplicationName(GuiStrings::getInstance()->appName());
 
   // libav setup
-  av_register_all();
+  // av_register_all() and av_lockmgr_register() were removed in modern ffmpeg:
+  // codecs self-register and the libraries are internally thread-safe.
   av_log_set_level(AV_LOG_ERROR);
-  av_lockmgr_register(NULL);
 
   // primitive command line use
   if (argc > 2) {
