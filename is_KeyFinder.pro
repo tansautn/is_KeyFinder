@@ -84,6 +84,20 @@ macx {
 
 win32 {
   QT += xml xmlpatterns
+
+  # Keep intermediate build artifacts (.o, moc_*, qrc_*, ui_*) out of the
+  # packaged output: they go under obj/, while the final exe lands in
+  # dist/<config>/ so the deploy+zip step bundles only runtime files.
+  OBJECTS_DIR = obj
+  MOC_DIR     = obj
+  RCC_DIR     = obj
+  UI_DIR      = obj
+  CONFIG(debug, debug|release) {
+    DESTDIR = dist/debug
+  } else {
+    DESTDIR = dist/release
+  }
+
   msys2 {
     # MSYS2 MINGW64 (qmake CONFIG+=msys2): headers/libs live in the MINGW prefix,
     # which is already on the default gcc search path, and use unix-style lib names.

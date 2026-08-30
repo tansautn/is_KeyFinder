@@ -52,7 +52,7 @@ jobs:
 
       - name: Deploy DLLs
         run: |
-          RELEASE_DIR="build/app/release"
+          RELEASE_DIR="build/app/dist/release"
           windeployqt-qt5 --release --no-translations --no-opengl-sw --no-angle \
             --no-system-d3d-compiler "${RELEASE_DIR}/KeyFinder.exe"
           ldd "${RELEASE_DIR}/KeyFinder.exe" 2>/dev/null \
@@ -68,25 +68,43 @@ jobs:
             done || true
           done
 
-      - name: Package
+      - name: Resolve version
         run: |
-          cd build/app/release
-          zip -r "$GITHUB_WORKSPACE/KeyFinder-windows-x64.zip" .
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VER="${{ github.event.release.tag_name }}"
+          else
+            SHA="${{ github.sha }}"
+            VER="dev-${SHA:0:7}"
+          fi
+          echo "ASSET_NAME=KeyFinder-windows-x64_${VER}" >> "$GITHUB_ENV"
 
+      # CI artifact: upload the raw runtime dir. upload-artifact always zips its
+      # input, so the download is a single .zip named after ASSET_NAME — passing
+      # a pre-made .zip here would double-zip it.
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KeyFinder-windows-x64
-          path: KeyFinder-windows-x64.zip
+          name: ${{ env.ASSET_NAME }}
+          path: build/app/dist/release
 
+      # Release asset: GitHub release assets are not auto-zipped, so build the
+      # .zip ourselves (zip lives in the msys2 shell) and attach it.
+      - name: Package for release
+        if: github.event_name == 'release'
+        run: |
+          cd build/app/dist/release
+          zip -r "$GITHUB_WORKSPACE/${ASSET_NAME}.zip" .
+
+      # gh is on the system PATH, reachable from Git bash but not the minimal
+      # msys2 PATH, so this step runs in bash.
       - name: Upload to release
         if: github.event_name == 'release'
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
-            KeyFinder-windows-x64.zip --clobber
+            "${ASSET_NAME}.zip" --clobber
 
   macos:
     runs-on: macos-latest

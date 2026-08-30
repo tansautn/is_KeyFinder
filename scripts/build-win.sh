@@ -144,10 +144,10 @@ build_app() {
   ( cd "${out}" && qmake-qt5 "CONFIG+=msys2" "${REPO_ROOT}/is_KeyFinder.pro" )
   echo ">> make (app)"
   ( cd "${out}" && mingw32-make -j"${JOBS}" )
-  echo ">> built: ${out}/release/KeyFinder.exe (or ${out}/KeyFinder.exe)"
+  echo ">> built: ${out}/dist/release/KeyFinder.exe"
 
   if [[ "${DO_DEPLOY}" == 1 ]]; then
-    deploy_app "${out}/release"
+    deploy_app "${out}/dist/release"
   fi
 }
 
@@ -161,7 +161,7 @@ build_tests() {
   echo ">> running tests"
   # test resources are referenced as ../is_KeyFinder/test-resources/... so run from a
   # sibling layout; fall back to running in-place if that path isn't present.
-  ( cd "${out}" && ./KeyFinderTests.exe || ./release/KeyFinderTests.exe )
+  ( cd "${out}" && ./dist/release/KeyFinderTests.exe || ./KeyFinderTests.exe || ./release/KeyFinderTests.exe )
 }
 
 [[ "${DO_DEPS}"  == 1 ]] && install_deps
