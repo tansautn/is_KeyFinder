@@ -41,8 +41,11 @@
 #define AUDIO_REFILL_THRESH 4096
 extern "C"{
 #include <libavutil/avutil.h>
+#include <libavutil/opt.h>
+#include <libavutil/channel_layout.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libswresample/swresample.h>
 }
 
 #ifdef Q_OS_WIN
@@ -57,18 +60,20 @@ public:
 private:
   void free();
   char* filePathCh;
-  uint8_t* frameBuffer;
-  uint8_t* frameBufferConverted;
-  int frameBufferSize;
+  uint8_t* outputBuffer;      // reusable interleaved S16 output for swr_convert
+  int outputBufferSamples;    // capacity of outputBuffer, in int16 samples
   int audioStream;
   int badPacketCount;
   int badPacketThreshold;
-  AVCodec* codec;
+  const AVCodec* codec;
   AVFormatContext* fCtx;
   AVCodecContext* cCtx;
-  AVDictionary* dict; // stays NULL, just here for legibility
-  ReSampleContext* rsCtx;
-  bool decodePacket(AVPacket*, KeyFinder::AudioData*);
+  SwrContext* swrCtx;
+  AVPacket* packet;
+  AVFrame* frame;
+  KeyFinder::AudioData* receiveFrames();
+  void appendFrameToAudio(AVFrame*, KeyFinder::AudioData*);
+  void ensureOutputBuffer(int);
 };
 
 #endif

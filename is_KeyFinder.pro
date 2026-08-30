@@ -37,8 +37,6 @@ TEMPLATE = app
 DEPENDPATH += .
 
 CONFIG += c++11
-LIBS += -stdlib=libc++
-QMAKE_CXXFLAGS += -std=c++11 -stdlib=libc++
 
 include(./source/source.pri)
 include(./forms/forms.pri)
@@ -67,6 +65,7 @@ unix|macx {
   LIBS += -lavcodec
   LIBS += -lavformat
   LIBS += -lavutil
+  LIBS += -lswresample
   LIBS += -ltag
   LIBS += -lz
 }
@@ -74,6 +73,8 @@ unix|macx {
 macx {
   DEPENDPATH += /usr/local/lib
   INCLUDEPATH += /usr/local/include
+  LIBS += -stdlib=libc++
+  QMAKE_CXXFLAGS += -stdlib=libc++
 
   QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
   QMAKE_MAC_SDK = macosx10.13
@@ -83,15 +84,43 @@ macx {
 
 win32 {
   QT += xml xmlpatterns
-  INCLUDEPATH += C:/mingw32/local/include
-  DEPENDPATH += C:/mingw32/local/bin
-  LIBS += -LC:/mingw32/local/bin
-  LIBS += -lkeyfinder0
-  LIBS += -lavcodec
-  LIBS += -lavformat
-  LIBS += -lavutil
-  LIBS += -llibtag
-  LIBS += -LC:/mingw32/local/lib
+
+  # Keep intermediate build artifacts (.o, moc_*, qrc_*, ui_*) out of the
+  # packaged output: they go under obj/, while the final exe lands in
+  # dist/<config>/ so the deploy+zip step bundles only runtime files.
+  OBJECTS_DIR = obj
+  MOC_DIR     = obj
+  RCC_DIR     = obj
+  UI_DIR      = obj
+  CONFIG(debug, debug|release) {
+    DESTDIR = dist/debug
+  } else {
+    DESTDIR = dist/release
+  }
+
+  msys2 {
+    # MSYS2 MINGW64 (qmake CONFIG+=msys2): headers/libs live in the MINGW prefix,
+    # which is already on the default gcc search path, and use unix-style lib names.
+    LIBS += -lkeyfinder
+    LIBS += -lavcodec
+    LIBS += -lavformat
+    LIBS += -lavutil
+    LIBS += -lswresample
+    LIBS += -ltag
+    LIBS += -lz
+  } else {
+    # Legacy hand-rolled 32-bit MinGW prefix.
+    INCLUDEPATH += C:/mingw32/local/include
+    DEPENDPATH += C:/mingw32/local/bin
+    LIBS += -LC:/mingw32/local/bin
+    LIBS += -lkeyfinder0
+    LIBS += -lavcodec
+    LIBS += -lavformat
+    LIBS += -lavutil
+    LIBS += -lswresample
+    LIBS += -llibtag
+    LIBS += -LC:/mingw32/local/lib
+  }
 }
 
 unix {

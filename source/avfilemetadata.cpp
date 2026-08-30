@@ -267,14 +267,14 @@ bool MpegID3FileMetadata::hasId3v2Tag() const {
 bool MpegID3FileMetadata::hasId3v2_3Tag() const {
     if (mpegFile == NULL) return true; // AIFF or WAV subclasses
     if (!hasId3v2Tag()) return false;
-    if (mpegFile->ID3v2Tag()->header()->majorVersion() != 3) return false;
+    if (static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()) != 3) return false;
     return true;
 }
 
 bool MpegID3FileMetadata::hasId3v2_4Tag() const {
     if (mpegFile == NULL) return true; // AIFF or WAV subclasses
     if (!hasId3v2Tag()) return false;
-    if (mpegFile->ID3v2Tag()->header()->majorVersion() != 4) return false;
+    if (static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()) != 4) return false;
     return true;
 }
 
@@ -307,12 +307,12 @@ bool MpegID3FileMetadata::setTitle(const QString& tit) {
     if (hasId3v1Tag()) {
         // TagLib's default save behaviour will write a v2 ID3 tag where none exists
         mpegFile->ID3v1Tag()->setTitle(TagLib::String(tit.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v1, false);
+        mpegFile->save(TagLib::MPEG::File::ID3v1, TagLib::File::StripNone);
         written = true;
     }
     if (hasId3v2Tag()) {
         mpegFile->ID3v2Tag()->setTitle(TagLib::String(tit.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v2, false, mpegFile->ID3v2Tag()->header()->majorVersion());
+        mpegFile->save(TagLib::MPEG::File::ID3v2, TagLib::File::StripNone, static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()));
         written = true;
     }
     return written;
@@ -322,12 +322,12 @@ bool MpegID3FileMetadata::setArtist(const QString& art) {
     bool written = false;
     if (hasId3v1Tag()) {
         mpegFile->ID3v1Tag()->setArtist(TagLib::String(art.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v1, false);
+        mpegFile->save(TagLib::MPEG::File::ID3v1, TagLib::File::StripNone);
         written = true;
     }
     if (hasId3v2Tag()) {
         mpegFile->ID3v2Tag()->setArtist(TagLib::String(art.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v2, false, mpegFile->ID3v2Tag()->header()->majorVersion());
+        mpegFile->save(TagLib::MPEG::File::ID3v2, TagLib::File::StripNone, static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()));
         written = true;
     }
     return written;
@@ -337,12 +337,12 @@ bool MpegID3FileMetadata::setAlbum(const QString& alb) {
     bool written = false;
     if (hasId3v1Tag()) {
         mpegFile->ID3v1Tag()->setAlbum(TagLib::String(alb.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v1, false);
+        mpegFile->save(TagLib::MPEG::File::ID3v1, TagLib::File::StripNone);
         written = true;
     }
     if (hasId3v2Tag()) {
         mpegFile->ID3v2Tag()->setAlbum(TagLib::String(alb.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v2, false, mpegFile->ID3v2Tag()->header()->majorVersion());
+        mpegFile->save(TagLib::MPEG::File::ID3v2, TagLib::File::StripNone, static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()));
         written = true;
     }
     return written;
@@ -352,16 +352,16 @@ bool MpegID3FileMetadata::setComment(const QString& cmt) {
     bool written = false;
     if (hasId3v1Tag()) {
         mpegFile->ID3v1Tag()->setComment(TagLib::String(cmt.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v1, false);
+        mpegFile->save(TagLib::MPEG::File::ID3v1, TagLib::File::StripNone);
         written = true;
     }
     if (hasId3v2Tag()) {
         // basic tag
         mpegFile->ID3v2Tag()->setComment(TagLib::String(cmt.toUtf8().constData(), TagLib::String::UTF8));
-        mpegFile->save(TagLib::MPEG::File::ID3v2, false, mpegFile->ID3v2Tag()->header()->majorVersion());
+        mpegFile->save(TagLib::MPEG::File::ID3v2, TagLib::File::StripNone, static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()));
         // iTunes comment hack
         setITunesCommentId3(mpegFile->ID3v2Tag(), cmt);
-        mpegFile->save(TagLib::MPEG::File::ID3v2, false, mpegFile->ID3v2Tag()->header()->majorVersion());
+        mpegFile->save(TagLib::MPEG::File::ID3v2, TagLib::File::StripNone, static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()));
         written = true;
     }
     return written;
@@ -394,7 +394,7 @@ void MpegID3FileMetadata::setITunesCommentId3(TagLib::ID3v2::Tag* tag, const QSt
 bool MpegID3FileMetadata::setGrouping(const QString& grp) {
     if (!hasId3v2Tag()) return false; // ID3v1 doesn't support Grouping
     setGroupingId3(mpegFile->ID3v2Tag(), grp);
-    mpegFile->save(TagLib::MPEG::File::ID3v2, true, mpegFile->ID3v2Tag()->header()->majorVersion());
+    mpegFile->save(TagLib::MPEG::File::ID3v2, TagLib::File::StripOthers, static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()));
     return true;
 }
 
@@ -410,7 +410,7 @@ bool MpegID3FileMetadata::setGroupingId3(TagLib::ID3v2::Tag* tag, const QString&
 bool MpegID3FileMetadata::setKey(const QString& key) {
     if (!hasId3v2Tag()) return false; // ID3v1 doesn't support Key
     setKeyId3(mpegFile->ID3v2Tag(), key);
-    mpegFile->save(TagLib::MPEG::File::ID3v2, false, mpegFile->ID3v2Tag()->header()->majorVersion());
+    mpegFile->save(TagLib::MPEG::File::ID3v2, TagLib::File::StripNone, static_cast<TagLib::ID3v2::Version>(mpegFile->ID3v2Tag()->header()->majorVersion()));
     return true;
 }
 
@@ -476,11 +476,11 @@ bool AiffID3FileMetadata::setKey(const QString& key) {
 // =================================== WAV =====================================
 
 QString WavID3FileMetadata::getGrouping() const {
-    return getGroupingId3(wavFile->tag());
+    return getGroupingId3(wavFile->ID3v2Tag());
 }
 
 QString WavID3FileMetadata::getKey() const {
-    return getKeyId3(wavFile->tag());
+    return getKeyId3(wavFile->ID3v2Tag());
 }
 
 bool WavID3FileMetadata::setTitle(const QString& tit) {
@@ -508,13 +508,13 @@ bool WavID3FileMetadata::setComment(const QString& cmt) {
 }
 
 bool WavID3FileMetadata::setGrouping(const QString& grp) {
-    setGroupingId3(wavFile->tag(), grp);
+    setGroupingId3(wavFile->ID3v2Tag(), grp);
     wavFile->save();
     return true;
 }
 
 bool WavID3FileMetadata::setKey(const QString& key) {
-    setKeyId3(wavFile->tag(), key);
+    setKeyId3(wavFile->ID3v2Tag(), key);
     wavFile->save();
     return true;
 }
@@ -522,29 +522,29 @@ bool WavID3FileMetadata::setKey(const QString& key) {
 // =================================== MP4 =====================================
 
 QString Mp4FileMetadata::getGrouping() const {
-    if (!mp4File->tag()->itemListMap().contains(keyMp4TagGrouping)) return emptyString;
-    TagLib::MP4::Item m = mp4File->tag()->itemListMap()[keyMp4TagGrouping];
+    if (!mp4File->tag()->itemMap().contains(keyMp4TagGrouping)) return emptyString;
+    TagLib::MP4::Item m = mp4File->tag()->itemMap()[keyMp4TagGrouping];
     TagLib::String out = m.toStringList().front();
     return QString::fromUtf8((out.toCString(true)));
 }
 
 QString Mp4FileMetadata::getKey() const {
-    if (!mp4File->tag()->itemListMap().contains(keyMp4TagKey)) return emptyString;
-    TagLib::MP4::Item m = mp4File->tag()->itemListMap()[keyMp4TagKey];
+    if (!mp4File->tag()->itemMap().contains(keyMp4TagKey)) return emptyString;
+    TagLib::MP4::Item m = mp4File->tag()->itemMap()[keyMp4TagKey];
     TagLib::String out = m.toStringList().front();
     return QString::fromUtf8((out.toCString(true)));
 }
 
 bool Mp4FileMetadata::setGrouping(const QString& grp) {
     TagLib::StringList sl(TagLib::String(grp.toUtf8().constData(), TagLib::String::UTF8));
-    mp4File->tag()->itemListMap().insert(keyMp4TagGrouping, sl);
+    mp4File->tag()->setItem(keyMp4TagGrouping, sl);
     mp4File->save();
     return true;
 }
 
 bool Mp4FileMetadata::setKey(const QString& key) {
     TagLib::StringList sl(TagLib::String(key.toUtf8().constData(), TagLib::String::UTF8));
-    mp4File->tag()->itemListMap().insert(keyMp4TagKey, sl);
+    mp4File->tag()->setItem(keyMp4TagKey, sl);
     mp4File->save();
     return true;
 }
