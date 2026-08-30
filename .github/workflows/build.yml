@@ -1,0 +1,134 @@
+name: Build
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-qt5-base
+            mingw-w64-x86_64-qt5-tools
+            mingw-w64-x86_64-qt5-xmlpatterns
+            mingw-w64-x86_64-taglib
+            mingw-w64-x86_64-fftw
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-ffmpeg
+
+      - name: Build libkeyfinder
+        run: |
+          git clone --depth 1 https://github.com/mixxxdj/libkeyfinder.git build/libkeyfinder
+          cmake -S build/libkeyfinder -B build/libkeyfinder/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}"
+          cmake --build build/libkeyfinder/build --parallel $(nproc)
+          cmake --install build/libkeyfinder/build
+
+      - name: Build KeyFinder
+        run: |
+          mkdir -p build/app && cd build/app
+          qmake-qt5 "CONFIG+=msys2" "$GITHUB_WORKSPACE/is_KeyFinder.pro"
+          mingw32-make -j$(nproc)
+
+      - name: Deploy DLLs
+        run: |
+          RELEASE_DIR="build/app/release"
+          windeployqt-qt5 --release --no-translations --no-opengl-sw --no-angle \
+            --no-system-d3d-compiler "${RELEASE_DIR}/KeyFinder.exe"
+          ldd "${RELEASE_DIR}/KeyFinder.exe" 2>/dev/null \
+            | grep -i mingw64 | awk '{print $3}' | sort -u | while read dll; do
+            base=$(basename "$dll")
+            [ -f "${RELEASE_DIR}/$base" ] || cp "$dll" "${RELEASE_DIR}/"
+          done
+          for existing in "${RELEASE_DIR}"/*.dll; do
+            ldd "$existing" 2>/dev/null \
+              | grep -i mingw64 | awk '{print $3}' | sort -u | while read dll; do
+              base=$(basename "$dll")
+              [ -f "${RELEASE_DIR}/$base" ] || cp "$dll" "${RELEASE_DIR}/"
+            done
+          done
+
+      - name: Package
+        run: |
+          cd build/app/release
+          7z a -mx=9 "$GITHUB_WORKSPACE/KeyFinder-windows-x64.zip" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeyFinder-windows-x64
+          path: KeyFinder-windows-x64.zip
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            KeyFinder-windows-x64.zip --clobber
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install qt@5 ffmpeg taglib fftw
+          echo "$(brew --prefix qt@5)/bin" >> $GITHUB_PATH
+
+      - name: Build libkeyfinder
+        run: |
+          git clone --depth 1 https://github.com/mixxxdj/libkeyfinder.git build/libkeyfinder
+          cmake -S build/libkeyfinder -B build/libkeyfinder/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX=/usr/local
+          cmake --build build/libkeyfinder/build --parallel $(sysctl -n hw.logicalcpu)
+          sudo cmake --install build/libkeyfinder/build
+
+      - name: Build KeyFinder
+        run: |
+          mkdir -p build/app && cd build/app
+          qmake "$GITHUB_WORKSPACE/is_KeyFinder.pro"
+          make -j$(sysctl -n hw.logicalcpu)
+
+      - name: Package
+        run: |
+          cd build/app
+          zip -r "$GITHUB_WORKSPACE/KeyFinder-macos.zip" KeyFinder.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeyFinder-macos
+          path: KeyFinder-macos.zip
+          if-no-files-found: warn
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            KeyFinder-macos.zip --clobber
