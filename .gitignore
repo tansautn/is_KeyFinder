@@ -11,3 +11,6 @@ KeyFinder
 Makefile
 *.ts
 !is_keyfinder_en_GB.ts
+build/
+.qmake.stash
+dist
