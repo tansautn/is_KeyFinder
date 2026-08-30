@@ -68,6 +68,7 @@ install_deps() {
   echo ">> installing MSYS2 packages"
   pacman -S --needed --noconfirm \
     git \
+    zip \
     mingw-w64-x86_64-toolchain \
     mingw-w64-x86_64-make \
     mingw-w64-x86_64-cmake \
