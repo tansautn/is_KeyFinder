@@ -71,15 +71,25 @@ unix|macx {
 }
 
 macx {
-  DEPENDPATH += /usr/local/lib
-  INCLUDEPATH += /usr/local/include
+  # Homebrew lives in /opt/homebrew on Apple Silicon and /usr/local on Intel.
+  # Ask brew for the real prefix so headers/libs are found on both (and on
+  # the arm64 GitHub Actions runners); fall back to /usr/local if brew is absent.
+  BREW_PREFIX = $$system(brew --prefix 2>/dev/null)
+  isEmpty(BREW_PREFIX): BREW_PREFIX = /usr/local
+
+  INCLUDEPATH += $$BREW_PREFIX/include
+  DEPENDPATH  += $$BREW_PREFIX/lib
+  LIBS        += -L$$BREW_PREFIX/lib
   LIBS += -stdlib=libc++
   QMAKE_CXXFLAGS += -stdlib=libc++
 
-  QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
-  QMAKE_MAC_SDK = macosx10.13
-  CONFIG -= ppc ppc64 x86
-  CONFIG += x86_64
+
+  QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.15
+  # Do not pin QMAKE_MAC_SDK to a specific version (e.g. macosx10.13): that SDK
+  # is not installed on modern runners and qmake aborts with
+  # "Could not resolve SDK Path". Letting it default uses whatever SDK ships.
+  # Build the toolchain's native arch (arm64 on Apple Silicon) rather than
+  # forcing x86_64, which would mismatch the arm64 Homebrew libraries.
 }
 
 win32 {
